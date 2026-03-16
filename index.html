@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Guerre des Ducs</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=IM+Fell+English:ital@0;1&family=Uncial+Antiqua&display=swap');
+
+  :root {
+    --parchment: #d4b896;
+    --parchment-dark: #b8935a;
+    --parchment-light: #e8d5b7;
+    --ink: #2c1a0e;
+    --ink-light: #5c3d1e;
+    --orf-blue: #1a3a5c;
+    --orf-light: #2a5a8c;
+    --orf-gold: #c8a820;
+    --wulf-red: #6b1a1a;
+    --wulf-light: #8b2a2a;
+    --wulf-silver: #8a8a8a;
+    --terrain-plain: #c8d8a0;
+    --terrain-forest: #4a7a3a;
+    --terrain-hills: #b88860;
+    --terrain-river: #4878a0;
+    --terrain-city: #c0a060;
+    --terrain-fortress: #887060;
+    --hex-border: #5a4020;
+    --road-color: #d4a040;
+    --gold-accent: #c8a820;
+    --shadow: rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1008;
+    font-family: 'IM Fell English', serif;
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  #header {
+    background: linear-gradient(135deg, var(--ink) 0%, #3a2010 50%, var(--ink) 100%);
+    border-bottom: 3px solid var(--gold-accent);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 20px var(--shadow);
+    position: relative;
+  }
+  #header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8a820' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .title-block { text-align: center; flex: 1; }
+  .title-main {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--gold-accent);
+    letter-spacing: 4px;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.8), 0 0 30px rgba(200,168,32,0.3);
+    line-height: 1;
+  }
+  .title-sub {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: var(--parchment-dark);
+    letter-spacing: 6px;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+  .faction-badge {
+    text-align: center;
+    padding: 8px 16px;
+    border: 1px solid;
+    min-width: 130px;
+  }
+  .faction-badge.orf {
+    border-color: var(--orf-gold);
+    background: rgba(26,58,92,0.3);
+  }
+  .faction-badge.wulf {
+    border-color: var(--wulf-silver);
+    background: rgba(107,26,26,0.3);
+  }
+  .faction-name {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+  .faction-badge.orf .faction-name { color: var(--orf-gold); }
+  .faction-badge.wulf .faction-name { color: #c0c0c0; }
+  .faction-score {
+    font-size: 10px;
+    margin-top: 2px;
+    opacity: 0.8;
+    color: var(--parchment-light);
+  }
+
+  /* MAIN LAYOUT */
+  #main {
+    display: flex;
+    flex: 1;
+    gap: 0;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 200px;
+    min-width: 200px;
+    background: linear-gradient(180deg, #1e1208 0%, #2a1a0a 100%);
+    border-right: 2px solid #3a2810;
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  .sidebar-right {
+    border-right: none;
+    border-left: 2px solid #3a2810;
+  }
+  .panel {
+    background: rgba(212,184,150,0.08);
+    border: 1px solid rgba(200,168,32,0.2);
+    padding: 10px;
+    border-radius: 2px;
+  }
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold-accent);
+    border-bottom: 1px solid rgba(200,168,32,0.3);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .unit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .unit-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    font-size: 11px;
+  }
+  .unit-item:hover { background: rgba(200,168,32,0.1); border-color: rgba(200,168,32,0.3); }
+  .unit-item.selected { background: rgba(200,168,32,0.2); border-color: var(--gold-accent); }
+  .unit-item.moved { opacity: 0.5; }
+  .unit-symbol {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; border: 1px solid;
+    flex-shrink: 0;
+    font-family: 'Cinzel', serif;
+  }
+  .unit-symbol.orf { border-color: var(--orf-gold); background: var(--orf-blue); color: var(--orf-gold); }
+  .unit-symbol.wulf { border-color: var(--wulf-silver); background: var(--wulf-red); color: #e0e0e0; }
+  .unit-info { color: var(--parchment-light); line-height: 1.3; }
+  .unit-stats { font-size: 9px; color: var(--parchment-dark); }
+
+  #info-log {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 200px;
+    font-size: 10px;
+    color: var(--parchment-light);
+    line-height: 1.6;
+    padding: 4px;
+  }
+  .log-entry { margin-bottom: 3px; padding: 2px 4px; border-left: 2px solid transparent; }
+  .log-entry.combat { border-color: #c04040; background: rgba(192,64,64,0.1); }
+  .log-entry.move { border-color: #4080c0; background: rgba(64,128,192,0.1); }
+  .log-entry.system { border-color: var(--gold-accent); color: var(--gold-accent); }
+
+  /* STATUS BAR */
+  #status-bar {
+    background: #0e0906;
+    border-top: 1px solid #3a2810;
+    border-bottom: 1px solid #3a2810;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: var(--parchment-dark);
+  }
+  .status-turn { color: var(--gold-accent); font-weight: 700; }
+  .status-phase {
+    padding: 3px 10px;
+    border: 1px solid;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .status-phase.orf { border-color: var(--orf-gold); color: var(--orf-gold); background: rgba(26,58,92,0.4); }
+  .status-phase.wulf { border-color: var(--wulf-silver); color: #c0c0c0; background: rgba(107,26,26,0.4); }
+  #btn-end-phase {
+    margin-left: auto;
+    padding: 6px 18px;
+    background: linear-gradient(135deg, #3a2810, #5a3a18);
+    border: 1px solid var(--gold-accent);
+    color: var(--gold-accent);
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  #btn-end-phase:hover {
+    background: linear-gradient(135deg, #5a3a18, #7a5a28);
+    box-shadow: 0 0 10px rgba(200,168,32,0.4);
+  }
+
+  /* MAP AREA */
+  #map-container {
+    flex: 1;
+    overflow: hidden;
+    background: #0a0604;
+    position: relative;
+    cursor: grab;
+    user-select: none;
+  }
+  #map-container.panning { cursor: grabbing; }
+
+  #map-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+  }
+
+  #zoom-controls {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 10;
+  }
+  .zoom-btn {
+    width: 30px; height: 30px;
+    background: rgba(10,6,4,0.9);
+    border: 1px solid var(--gold-accent);
+    color: var(--gold-accent);
+    font-size: 16px;
+    font-family: 'Cinzel', serif;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    line-height: 1;
+  }
+  .zoom-btn:hover { background: rgba(200,168,32,0.2); }
+
+  /* SELECTED INFO */
+  #selected-info {
+    background: rgba(10,6,4,0.95);
+    border: 1px solid var(--gold-accent);
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--parchment-light);
+    min-height: 50px;
+  }
+  .sel-name { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold-accent); margin-bottom: 4px; }
+  .sel-stats { display: flex; gap: 12px; }
+  .sel-stat span { color: var(--gold-accent); font-weight: 700; }
+
+  /* COMBAT MODAL */
+  #combat-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #combat-modal.active { display: flex; }
+  .modal-box {
+    background: linear-gradient(135deg, #1e1208, #2a1a0a);
+    border: 2px solid var(--gold-accent);
+    padding: 28px 36px;
+    min-width: 380px;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(200,168,32,0.3), inset 0 0 40px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .modal-box::before {
+    content: '⚔';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 32px;
+    color: var(--gold-accent);
+    text-shadow: 0 0 20px var(--gold-accent);
+    background: #1e1208;
+    padding: 0 8px;
+  }
+  .modal-title {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gold-accent);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+  .combat-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .combat-side {
+    text-align: center;
+    padding: 10px 16px;
+    border: 1px solid;
+    min-width: 110px;
+  }
+  .combat-side.attacker { border-color: #4040c0; }
+  .combat-side.defender { border-color: #c04040; }
+  .combat-side-name { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: var(--parchment-dark); }
+  .combat-side-power { font-size: 28px; font-weight: 700; font-family: 'Cinzel', serif; }
+  .combat-side.attacker .combat-side-power { color: #6080e0; }
+  .combat-side.defender .combat-side-power { color: #e06060; }
+  .combat-vs-label { font-size: 22px; color: var(--gold-accent); }
+  .combat-ratio { font-family: 'Cinzel', serif; font-size: 13px; color: var(--parchment-dark); margin: 8px 0; }
+  #dice-result {
+    font-size: 52px;
+    color: var(--gold-accent);
+    text-shadow: 0 0 20px var(--gold-accent);
+    line-height: 1;
+    margin: 12px 0;
+    min-height: 60px;
+  }
+  .dice-faces { font-size: 14px; color: var(--parchment-dark); }
+  #result-text {
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 10px 0;
+    min-height: 30px;
+    letter-spacing: 2px;
+  }
+  #result-detail { font-size: 12px; color: var(--parchment-light); min-height: 20px; }
+  .modal-btns { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+  .modal-btn {
+    padding: 8px 24px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border: 1px solid;
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .modal-btn.primary {
+    border-color: var(--gold-accent);
+    color: var(--gold-accent);
+  }
+  .modal-btn.primary:hover { background: rgba(200,168,32,0.2); box-shadow: 0 0 10px rgba(200,168,32,0.3); }
+  .modal-btn.secondary {
+    border-color: var(--parchment-dark);
+    color: var(--parchment-dark);
+  }
+  .modal-btn.secondary:hover { background: rgba(212,184,150,0.1); }
+
+  /* VICTORY MODAL */
+  #victory-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  #victory-modal.active { display: flex; }
+  .victory-box {
+    background: linear-gradient(135deg, #1a1208, #2a2010);
+    border: 3px solid var(--gold-accent);
+    padding: 40px 60px;
+    text-align: center;
+    box-shadow: 0 0 80px rgba(200,168,32,0.5);
+  }
+  .victory-crown { font-size: 60px; margin-bottom: 16px; }
+  .victory-title {
+    font-family: 'Cinzel', serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--gold-accent);
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+  .victory-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    color: var(--parchment-dark);
+    letter-spacing: 3px;
+  }
+  .victory-detail { font-size: 14px; color: var(--parchment-light); margin: 16px 0; line-height: 1.6; }
+  #btn-new-game {
+    margin-top: 20px;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #3a2810, #5a3a18);
+    border: 2px solid var(--gold-accent);
+    color: var(--gold-accent);
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  /* HELP PANEL */
+  .terrain-legend { display: flex; flex-direction: column; gap: 4px; }
+  .terrain-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--parchment-light); }
+  .terrain-swatch { width: 14px; height: 14px; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0; }
+
+  /* TOOLTIP */
+  #tooltip {
+    position: fixed;
+    background: rgba(10,6,4,0.97);
+    border: 1px solid var(--gold-accent);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--parchment-light);
+    pointer-events: none;
+    z-index: 50;
+    max-width: 160px;
+    display: none;
+    line-height: 1.5;
+  }
+  #tooltip.visible { display: block; }
+  #tooltip strong { color: var(--gold-accent); font-family: 'Cinzel', serif; font-size: 10px; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0604; }
+  ::-webkit-scrollbar-thumb { background: #3a2810; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <div id="header">
+    <div class="faction-badge orf">
+      <div class="faction-name">⚜ Orfburg</div>
+      <div class="faction-score" id="orf-units-count">11 unités</div>
+    </div>
+    <div class="title-block">
+      <div class="title-main">La Guerre des Ducs</div>
+      <div class="title-sub">Campagne Napoléonienne — 1:2 joueurs</div>
+    </div>
+    <div class="faction-badge wulf">
+      <div class="faction-name">🐺 Wulfenburg</div>
+      <div class="faction-score" id="wulf-units-count">11 unités</div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="status-bar">
+    <span>Tour</span>
+    <span class="status-turn" id="turn-display">1 / 15</span>
+    <span style="color:#5a4020">|</span>
+    <span id="phase-badge" class="status-phase orf">Phase ORF — Mouvement</span>
+    <span style="color:#5a4020; flex:1">— Cliquez une unité puis une case pour bouger. Cliquez une unité ennemie pour attaquer.</span>
+    <button id="btn-end-phase">Fin de phase ›</button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar">
+      <div class="panel">
+        <div class="panel-title">⚜ Orfburg</div>
+        <div class="unit-list" id="orf-unit-list"></div>
+      </div>
+      <div class="panel" style="flex:1">
+        <div class="panel-title">📜 Journal de Guerre</div>
+        <div id="info-log"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🗺 Légende Terrain</div>
+        <div class="terrain-legend">
+          <div class="terrain-item"><div class="terrain-swatch" style="background:#c8d8a0"></div>Plaine</div>
+          <div class="terrain-item"><div class="terrain-swatch" style="background:#4a7a3a"></div>Forêt (2pts)</div>
+          <div class="terrain-item"><div class="terrain-swatch" style="background:#b88860"></div>Hauteur (2pts)</div>
+          <div class="terrain-item"><div class="terrain-swatch" style="background:#c0a060"></div>Ville (×2 déf)</div>
+          <div class="terrain-item"><div class="terrain-swatch" style="background:#887060"></div>Forteresse (×3)</div>
+          <div class="terrain-item"><div class="terrain-swatch" style="background:#4878a0"></div>Rivière</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div id="map-container">
+      <canvas id="map-canvas"></canvas>
+      <div id="zoom-controls">
+        <button class="zoom-btn" onclick="adjustZoom(0.15)">+</button>
+        <button class="zoom-btn" onclick="adjustZoom(-0.15)">−</button>
+        <button class="zoom-btn" style="font-size:10px" onclick="resetView()">⌂</button>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <div class="sidebar sidebar-right">
+      <div class="panel">
+        <div class="panel-title">🐺 Wulfenburg</div>
+        <div class="unit-list" id="wulf-unit-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🎯 Sélection</div>
+        <div id="selected-info">
+          <div style="color:var(--parchment-dark); font-size:11px; font-style:italic">Aucune unité sélectionnée</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">📊 Table Résultats</div>
+        <div style="font-size:9px; color:var(--parchment-dark); line-height:1.6">
+          <div style="color:var(--gold-accent); margin-bottom:4px; font-family:'Cinzel',serif">Rapport → Résultat</div>
+          <div>1:5 → AR / AE</div>
+          <div>1:4 → AR / AE</div>
+          <div>1:3 → DR / AR</div>
+          <div>1:2 → DR / AR</div>
+          <div>1:1 → DR / AR</div>
+          <div>2:1 → DR / AR→DE</div>
+          <div>3:1 → DR / DR→DE</div>
+          <div>4:1 → DE / DR</div>
+          <div>5:1 → DE / DE</div>
+          <div>6:1 → DE / EX</div>
+          <div style="margin-top:6px; color:var(--parchment-dark)">
+            <strong style="color:var(--gold-accent)">AE</strong>=Att.Éliminé<br>
+            <strong style="color:var(--gold-accent)">AR</strong>=Att.Recule<br>
+            <strong style="color:var(--gold-accent)">DE</strong>=Déf.Éliminé<br>
+            <strong style="color:var(--gold-accent)">DR</strong>=Déf.Recule<br>
+            <strong style="color:var(--gold-accent)">EX</strong>=Échange
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🎲 Modificateurs Terrain</div>
+        <div style="font-size:9px; color:var(--parchment-dark); line-height:1.6">
+          <div>Forêt: -1 au dé</div>
+          <div>Hauteur: -1 au dé</div>
+          <div>Forteresse: -2 au dé</div>
+          <div>Plaine: ±0</div>
+          <div>Ville: ±0 (×2 déf)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMBAT MODAL -->
+<div id="combat-modal">
+  <div class="modal-box">
+    <div class="modal-title">Combat!</div>
+    <div class="combat-vs">
+      <div class="combat-side attacker">
+        <div class="combat-side-name">ATTAQUANT</div>
+        <div class="combat-side-power" id="atk-power">0</div>
+        <div style="font-size:10px;color:var(--parchment-dark)" id="atk-name">-</div>
+      </div>
+      <div class="combat-vs-label">⚔</div>
+      <div class="combat-side defender">
+        <div class="combat-side-name">DÉFENSEUR</div>
+        <div class="combat-side-power" id="def-power">0</div>
+        <div style="font-size:10px;color:var(--parchment-dark)" id="def-name">-</div>
+      </div>
+    </div>
+    <div class="combat-ratio" id="combat-ratio-text">Rapport: 1:1</div>
+    <div class="dice-faces">🎲 Lancer du dé</div>
+    <div id="dice-result">—</div>
+    <div id="result-text" style="color:var(--gold-accent)"></div>
+    <div id="result-detail"></div>
+    <div class="modal-btns">
+      <button class="modal-btn primary" id="btn-roll" onclick="rollCombatDie()">Lancer le dé !</button>
+      <button class="modal-btn secondary" id="btn-cancel-combat" onclick="closeCombatModal()">Annuler</button>
+      <button class="modal-btn primary" id="btn-apply" style="display:none" onclick="applyCombatResult()">Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<!-- VICTORY MODAL -->
+<div id="victory-modal">
+  <div class="victory-box">
+    <div class="victory-crown" id="victory-crown">👑</div>
+    <div class="victory-title" id="victory-title">VICTOIRE!</div>
+    <div class="victory-subtitle" id="victory-subtitle">DUCHÉ D'ORFBURG</div>
+    <div class="victory-detail" id="victory-detail">La capitale ennemie est tombée!</div>
+    <button id="btn-new-game" onclick="initGame()">Nouvelle Partie</button>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS & MAP DATA
+// ═══════════════════════════════════════════════════════
+
+const COLS = 32, ROWS = 23;
+const HEX_SIZE = 36;
+const HEX_W = Math.sqrt(3) * HEX_SIZE;
+const HEX_H = HEX_SIZE * 2;
+
+// Terrain types
+const T = {
+  PLAIN: 'plain',
+  FOREST: 'forest',
+  HILLS: 'hills',
+  RIVER: 'river',
+  LAKE: 'lake',
+  CITY: 'city',
+  FORTRESS: 'fortress',
+  ROAD: 'road',
+};
+
+const TERRAIN_COLORS = {
+  plain: '#c0d090',
+  forest: '#3a6a2e',
+  hills: '#a87850',
+  river: '#4878a0',
+  lake: '#3060a0',
+  city: '#c8a860',
+  fortress: '#333333',
+  road: '#999999',
+};
+
+const TERRAIN_MOVE_COST = {
+  plain: 1, forest: 2, hills: 2, city: 0.5, fortress: 1,
+  road: 0.5, river: Infinity, lake: Infinity,
+};
+
+// Movement allowances
+const UNIT_MOVE = { inf: 4, cav: 6, art: 3, duc: 3 };
+const UNIT_ATTACK = { inf: 3, cav: 3, art: 3, duc: 0 };
+
+// Build the map grid
+// Each cell: { type, road, bridge, name, owner }
+function buildMap() {
+  const grid = {};
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      grid[`${c},${r}`] = { type: T.PLAIN, road: false, bridge: false, name: null, owner: null };
+    }
+  }
+
+  const set = (c, r, data) => {
+    if (grid[`${c},${r}`]) Object.assign(grid[`${c},${r}`], data);
+  };
+
+  // Forests
+  [
+    [0,6],[0,7],[0,8],[0,9],[0,10],[0,11],
+    [1,6],[1,7],[1,8],[1,9],
+    [2,6],[2,7],[2,8],
+
+    [0,15],[0,16],[0,17],
+    [2,15],[2,16],[3,15],
+    [3,13],[3,12],[4,12],[4,13],[4,14],[5,12],[5,13],
+
+    [0,20],[0,21],[0,22],
+    [1,20],[1,21],[1,22],
+    [2,21],[2,22],
+    [3,19],[3,20],[3,21],[3,22],
+    [4,20],[4,21],[4,22],
+    [5,19],[5,20],[5,21],[5,22],
+    [6,20],[6,21],[6,22],
+    [7,21],[7,22],
+
+    [13,0],[14,0],[14,1],[15,0],
+    [17,1],[18,1],
+    [16,4],[15,4],[16,5],[17,4],[18,4],[19,3],
+    [20,0],[21,0],[22,0],[22,1],
+    [21,2],
+
+    [6,5],[5,7],[5,6],[6,7],[7,6],
+
+    [8,11],[8,12],[9,10],[9,11],[9,12],[10,12],
+    [12,11],[12,12],[12,13],
+    [11,16],[12,16],[13,15],[12,18],[13,18],[14,18],[14,17],
+
+    [20,10],[20,9],[20,8],[21,8],[21,9],[22,7],[22,8],[22,9],[23,9],
+
+    [27,7],[28,7],[29,6],[29,7],[30,6],[30,7],[31,5],[31,6],
+
+    [26,19],[26,20],[26,21],[26,22],[25,19],[25,20],[25,22],
+    [24,22],[23,22],[23,21],
+
+    [27,15],[27,14],[26,15],[28,15],[29,15],[30,15],[31,15],[31,14],[30,14],[29,14],[31,13],
+
+    [23,19],[23,18],[22,20],[22,19],[22,18],[21,19],[21,17],[21,18],[22,17],[20,19]
+
+  ].forEach(([c,r]) => set(c,r,{type:T.FOREST}));
+  
+  // Hills
+  [
+    [0,4],[1,3],[2,3],[3,2],[4,2],[6,0],
+
+    [12,0],[12,1],[13,1],[14,2],[14,3],[15,3],
+    [17,3],[18,3],[19,2],[19,1],[19,0],
+
+    [13,22],[14,21],[14,22],[15,19],[15,20],[15,18],[16,18],[16,17],[16,16],[17,15],[18,15],[19,14],[20,14],[20,13],[20,12],[20,11],[23,8],[24,8],[25,7],[26,7],[27,6],[28,6],[29,5],[30,5],[31,4]
+
+  ].forEach(([c,r]) => set(c,r,{type:T.HILLS}));
+  
+  // River — vertical split around col 9
+  [
+    [0,18],[1,17],[2,17],[3,16],[4,16],[4,15],[5,14],[6,14],[8,14],[8,13],[9,13],[10,13],
+    [11,13],
+    [11,12],[11,11],[10,11],[11,10],[12,10],[13,9],[14,9],[15,8],
+    [15,7],[16,8],[16,6],[15,6],[17,5],[18,5],[19,4],[20,4],[21,3],[22,3],[17,7],[18,7],[19,6],[20,6],[20,5],
+    [23,2],[23,1],[23,0],
+
+    [30,16],[30,18],[31,16],[31,17],[29,17],[29,16],[28,18],[27,18],[27,19],[27,20],[27,21],[27,22],
+
+    [12,20],[12,21],[12,22],[12,19],[11,18],[11,17],[10,16],[10,17],[11,15],[12,15],[12,14],
+    [4,0],[4,1],[6,1],[6,2],[6,0]
+  ].forEach(([c,r]) => set(c,r,{type:T.RIVER}));
+
+
+  // Lake
+  //[[9,9],[9,10],[10,10],[10,11],[11,11]].forEach(([c,r]) => set(c,r,{type:T.LAKE}));
+
+  // Bridges
+  // set(8, 7, { type: T.PLAIN, bridge: true });
+  // set(11, 3, { type: T.PLAIN, bridge: true });
+
+  // Roads (approximate)
+  [
+    [2,3],[2,4],[3,4],[4,5],[5,5],
+
+    [5,4],[5,3],[5,2],
+    [3,5],[3,6],[3,7],[3,8],[2,9],[2,10],[1,10],[1,11],[1,12],[1,13],[1,14],[1,15],[1,16],[1,17],[1,18],[1,19],[1,20],[0,21],[0,22],
+
+    [6,7],[7,7],[8,8],[9,8],[10,9],[11,9],[12,10],[13,10],
+    [7,8],[7,9],[7,10],[7,11],[7,12],[7,13],
+
+    [4,15],[5,15],[6,16],[6,17],[6,18],[7,18],[8,19],[8,20],[9,20],[9,21],[9,22],
+
+    [7,1],[8,2],[8,3],[9,3],[10,4],[11,4],[12,5],[13,5],[14,5],[15,5],[17,4],[17,3],[16,3],
+
+    [11,5],[11,6],[11,7],
+
+    [19,7],[19,8],[19,9],[19,10],[20,11],
+  
+    [23,9],[23,8],[23,7],[22,7],
+    [21,5],[21,4],[22,4],
+  
+    [14,12],[15,12],[16,13],[17,13],[18,14],[18,15],[19,15],[19,16],[20,17],[21,17],[22,18],[23,18],
+    [24,19],[25,19],[26,20],[28,21],
+
+    [8,15],[9,15],[10,15],[11,14],[13,13],[14,13],
+    [14,16],[15,15],[16,15],[17,14],
+    [9,18],[10,18],
+
+    [10,20],[11,20],
+    [12,20],[13,20],
+    [14,20],[15,20],
+    [16,20],[17,20],
+    [18,20],[19,20],
+    [20,20],[21,20],
+    [22,21],[23,20],[24,20],
+    
+    [22,11],[22,12],[22,13],[22,14],
+    [22,15],[22,16],[22,17],
+
+    [24,10],[25,10],
+    [28,10],[27,10],
+    [29,9],[30,9],[31,8],
+    [26,11],[26,12],[26,13],[26,14],
+    [26,15],[26,16],[26,17],[26,18],[26,19],
+
+  ].forEach(([c,r]) => {
+    if (grid[`${c},${r}`] && grid[`${c},${r}`].type !== T.RIVER) set(c,r,{road:true});
+  });
+
+  set(1, 17, { type: T.ROAD, bridge: true });
+  set(12, 10, { type: T.ROAD, bridge: true });
+  set(4, 15, { type: T.ROAD, bridge: true });
+  set(4, 0, { type: T.ROAD, bridge: true });
+  set(6, 1, { type: T.ROAD, bridge: true });
+  set(16, 6, { type: T.ROAD, bridge: true });
+  set(18, 5, { type: T.ROAD, bridge: true });
+  set(19, 6, { type: T.ROAD, bridge: true });
+  set(22, 3, { type: T.ROAD, bridge: true });
+  set(27, 20, { type: T.ROAD, bridge: true });
+  set(12, 14, { type: T.ROAD, bridge: true });
+  set(11, 17, { type: T.ROAD, bridge: true });
+  set(12, 20, { type: T.ROAD, bridge: true });
+  
+  //DONE
+  // Cities
+  set(0, 0, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(0, 1, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(0, 2, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(0, 3, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(1, 0, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(1, 1, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(1, 2, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(2, 0, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(2, 1, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+  set(2, 2, { type: T.CITY, name: 'Wulfenburg', owner: 'wulf' });   // WULF capital
+
+  set(2,14, { type: T.CITY, name: 'Mursk', owner: 'wulf' });    // Contested city
+  set(3,14, { type: T.CITY, name: 'Mursk', owner: 'wulf' });    // Contested city
+  set(7,14, { type: T.CITY, name: 'Urft', owner: 'wulf' });    // Contested city
+  set(6,6, { type: T.CITY, name: 'Bad', owner: 'wulf' });    // Contested city
+
+  set(5, 0, { type: T.FORTRESS, name: 'Fort Wulf', owner: 'wulf' });
+  set(5, 1, { type: T.FORTRESS, name: 'Fort Wulf', owner: 'wulf' });
+
+  set(15, 2, { type: T.FORTRESS, name: '', owner: '' });
+  set(11, 8, { type: T.FORTRESS, name: '', owner: '' });
+  set(13, 11, { type: T.FORTRESS, name: '', owner: '' });
+  set(21, 6, { type: T.FORTRESS, name: '', owner: '' });
+
+  set(13, 17, { type: T.CITY, name: 'Grossburg', owner: '' });
+  set(13, 16, { type: T.CITY, name: 'Grossburg', owner: '' });
+  set(12, 17, { type: T.CITY, name: 'Grossburg', owner: '' });
+
+  set(22, 2, { type: T.CITY, name: 'Rienbad', owner: '' });
+
+  set(22, 10, { type: T.CITY, name: 'Menster', owner: '' });
+  set(21, 10, { type: T.CITY, name: 'Menster', owner: '' });
+
+  set(30, 17, { type: T.FORTRESS, name: '', owner: '' });
+  set(28, 19, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(28, 20, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(29, 18, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(29, 19, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(29, 20, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(29, 21, { type: T.CITY, name: 'Orfburg', owner: '' });
+
+  set(30, 19, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(30, 20, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(30, 21, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(30, 22, { type: T.CITY, name: 'Orfburg', owner: '' });
+
+  set(31, 18, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(31, 19, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(31, 20, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(31, 21, { type: T.CITY, name: 'Orfburg', owner: '' });
+  set(31, 22, { type: T.CITY, name: 'Orfburg', owner: '' });
+
+  set(16, 7, { type: T.CITY, name: 'Kaiserburg', owner: 'wulf' });    // Contested city
+  set(17, 6, { type: T.CITY, name: 'Kaiserburg', owner: 'wulf' });    // Contested city
+  set(18, 6, { type: T.CITY, name: 'Kaiserburg', owner: 'wulf' });    // Contested city
+  set(19, 5, { type: T.CITY, name: 'Kaiserburg', owner: 'wulf' });    // Contested city
+  
+  return grid;
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════
+
+let game = {};
+
+function initGame() {
+  document.getElementById('victory-modal').classList.remove('active');
+
+  const mapGrid = buildMap();
+
+  game = {
+    grid: mapGrid,
+    units: [],
+    selected: null,
+    turn: 1,
+    maxTurns: 15,
+    currentPlayer: 'orf',  // orf always starts
+    phase: 'move',          // 'move' or 'combat'
+    movedUnits: new Set(),
+    attackedUnits: new Set(),
+    combatPending: null,
+    log: [],
+  };
+
+  // Create units
+  let uid = 1;
+  const makeUnit = (faction, type, col, row, name) => ({
+    id: uid++,
+    faction,
+    type,
+    name,
+    col, row,
+    attack: UNIT_ATTACK[type],
+    move: UNIT_MOVE[type],
+    range: type === 'art' ? 2 : 1,
+    alive: true,
+    moved: false,
+    attacked: false,
+  });
+
+  // ORF units (left side)
+  game.units.push(makeUnit('orf', 'duc', 3, 0, 'Duc d\'Orfburg'));
+  game.units.push(makeUnit('orf', 'inf', 0, 0, 'Inf ORF 1'));
+  game.units.push(makeUnit('orf', 'inf', 0, 1, 'Inf ORF 2'));
+  game.units.push(makeUnit('orf', 'inf', 0, 2, 'Inf ORF 3'));
+  game.units.push(makeUnit('orf', 'inf', 0, 3, 'Inf ORF 4'));
+  game.units.push(makeUnit('orf', 'inf', 1, 0, 'Inf ORF 5'));
+  game.units.push(makeUnit('orf', 'inf', 1, 1, 'Inf ORF 6'));
+  game.units.push(makeUnit('orf', 'cav', 1, 2, 'Cav ORF 1'));
+  game.units.push(makeUnit('orf', 'cav', 2, 0, 'Cav ORF 2'));
+  game.units.push(makeUnit('orf', 'cav', 2, 1, 'Cav ORF 3'));
+  game.units.push(makeUnit('orf', 'art', 2, 2, 'Art ORF 1'));
+
+  // WULF units (right side)
+  game.units.push(makeUnit('wulf', 'duc', 31, 18, 'Duc de Wulfenburg'));
+  game.units.push(makeUnit('wulf', 'inf', 31, 19, 'Inf WULF 1'));
+  game.units.push(makeUnit('wulf', 'inf', 31, 20, 'Inf WULF 2'));
+  game.units.push(makeUnit('wulf', 'inf', 31, 21, 'Inf WULF 3'));
+  game.units.push(makeUnit('wulf', 'inf', 31, 22, 'Inf WULF 4'));
+  game.units.push(makeUnit('wulf', 'inf', 30, 19, 'Inf WULF 5'));
+  game.units.push(makeUnit('wulf', 'inf', 30, 20, 'Inf WULF 6'));
+  game.units.push(makeUnit('wulf', 'cav', 30, 21, 'Cav WULF 1'));
+  game.units.push(makeUnit('wulf', 'cav', 30, 22, 'Cav WULF 2'));
+  game.units.push(makeUnit('wulf', 'cav', 29, 19, 'Cav WULF 3'));
+  game.units.push(makeUnit('wulf', 'art', 29, 18, 'Art WULF 1'));
+
+  addLog('La Guerre des Ducs commence! Orfburg attaque en premier.', 'system');
+  render();
+  updateUI();
+}
+
+// ═══════════════════════════════════════════════════════
+//  HEX GEOMETRY
+// ═══════════════════════════════════════════════════════
+
+function hexToPixel(col, row) {
+  // Flat-top hexes: horiz step = 3/2 * size, vert step = sqrt(3) * size
+  // Odd rows are offset by half a vertical step
+  const x = HEX_SIZE * 1.5 * col + HEX_SIZE + 20;
+  const y = HEX_W * (row + (col % 2 === 1 ? 0.5 : 0)) + HEX_W / 2 + 20;
+  return { x, y };
+}
+
+function pixelToHex(px, py) {
+  // approximate
+  let bestCol = -1, bestRow = -1, bestDist = Infinity;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const { x, y } = hexToPixel(c, r);
+      const d = Math.sqrt((px - x) ** 2 + (py - y) ** 2);
+      if (d < bestDist) { bestDist = d; bestDist = d; bestCol = c; bestRow = r; }
+    }
+  }
+  return bestDist < HEX_SIZE * 1.2 ? { col: bestCol, row: bestRow } : null;
+}
+
+function hexCorners(cx, cy, size) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 180 * (60 * i);
+    pts.push([cx + size * Math.cos(angle), cy + size * Math.sin(angle)]);
+  }
+  return pts;
+}
+
+function hexNeighbors(col, row) {
+  const odd = col % 2 === 1;
+  const dirs = odd
+    ? [[-1,0],[1,0],[-1,-1],[1,-1],[0,-1],[0,1]]
+    : [[-1,0],[1,0],[-1,1],[1,1],[0,-1],[0,1]];
+  return dirs.map(([dc, dr]) => ({ col: col + dc, row: row + dr }))
+             .filter(({col, row}) => col >= 0 && col < COLS && row >= 0 && row < ROWS);
+}
+
+function hexDistance(c1, r1, c2, r2) {
+  function toCube(col, row) {
+    const x = col;
+    const z = row - (col - (col & 1)) / 2;
+    const y = -x - z;
+    return { x, y, z };
+  }
+  const a = toCube(c1, r1);
+  const b = toCube(c2, r2);
+  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.z - b.z));
+}
+
+// ═══════════════════════════════════════════════════════
+//  CANVAS RENDERING
+// ═══════════════════════════════════════════════════════
+
+let canvas, ctx;
+
+// Pan/zoom state
+let viewScale = 1;
+let viewX = 0, viewY = 0;
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
+let panOriginX = 0, panOriginY = 0;
+
+const MIN_ZOOM = 0.25, MAX_ZOOM = 3;
+
+function applyTransform() {
+  canvas.style.transform = `translate(${viewX}px, ${viewY}px) scale(${viewScale})`;
+}
+
+function adjustZoom(delta, pivotX, pivotY) {
+  const container = document.getElementById('map-container');
+  const rect = container.getBoundingClientRect();
+  // Default pivot: center of container
+  if (pivotX === undefined) pivotX = rect.width / 2;
+  if (pivotY === undefined) pivotY = rect.height / 2;
+
+  const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, viewScale + delta));
+  if (newScale === viewScale) return;
+
+  // Adjust pan so the pivot point stays fixed
+  const scaleRatio = newScale / viewScale;
+  viewX = pivotX - scaleRatio * (pivotX - viewX);
+  viewY = pivotY - scaleRatio * (pivotY - viewY);
+  viewScale = newScale;
+  applyTransform();
+}
+
+function resetView() {
+  const container = document.getElementById('map-container');
+  const rect = container.getBoundingClientRect();
+  // Fit map to container
+  const fitScale = Math.min(rect.width / canvas.width, rect.height / canvas.height, 1);
+  viewScale = fitScale;
+  viewX = (rect.width - canvas.width * viewScale) / 2;
+  viewY = (rect.height - canvas.height * viewScale) / 2;
+  applyTransform();
+}
+
+function canvasPoint(clientX, clientY) {
+  const container = document.getElementById('map-container');
+  const rect = container.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left - viewX) / viewScale,
+    y: (clientY - rect.top  - viewY) / viewScale,
+  };
+}
+
+function initCanvas() {
+  canvas = document.getElementById('map-canvas');
+  const totalW = HEX_SIZE * 1.5 * COLS + HEX_SIZE + 40;
+  const totalH = HEX_W * ROWS + HEX_W + 40;
+  canvas.width = totalW;
+  canvas.height = totalH;
+  ctx = canvas.getContext('2d');
+
+  const container = document.getElementById('map-container');
+
+  // Wheel zoom
+  container.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = container.getBoundingClientRect();
+    const pivotX = e.clientX - rect.left;
+    const pivotY = e.clientY - rect.top;
+    const delta = e.deltaY < 0 ? 0.12 : -0.12;
+    adjustZoom(delta, pivotX, pivotY);
+  }, { passive: false });
+
+  // Pan with middle-mouse or right-mouse drag; also left drag when no unit selected
+  container.addEventListener('mousedown', (e) => {
+    if (e.button === 1 || e.button === 2) {
+      e.preventDefault();
+      isPanning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panOriginX = viewX;
+      panOriginY = viewY;
+      container.classList.add('panning');
+    } else if (e.button === 0) {
+      // Left button — start a potential pan (will be cancelled if it was a click)
+      isPanning = false;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panOriginX = viewX;
+      panOriginY = viewY;
+      container._leftDragDist = 0;
+      container._leftDragPanning = false;
+    }
+  });
+
+  container.addEventListener('mousemove', (e) => {
+    if (isPanning) {
+      viewX = panOriginX + (e.clientX - panStartX);
+      viewY = panOriginY + (e.clientY - panStartY);
+      applyTransform();
+      return;
+    }
+    // Left-drag pan (only if moved more than 5px)
+    if (e.buttons === 1) {
+      const dx = e.clientX - panStartX;
+      const dy = e.clientY - panStartY;
+      container._leftDragDist = Math.sqrt(dx*dx + dy*dy);
+      if (container._leftDragDist > 5) {
+        container._leftDragPanning = true;
+        container.classList.add('panning');
+        viewX = panOriginX + dx;
+        viewY = panOriginY + dy;
+        applyTransform();
+        return;
+      }
+    }
+    // Hover tooltip (only when not dragging)
+    if (!container._leftDragPanning) onMapHover(e);
+  });
+
+  container.addEventListener('mouseup', (e) => {
+    if (isPanning) {
+      isPanning = false;
+      container.classList.remove('panning');
+      return;
+    }
+    if (e.button === 0) {
+      container.classList.remove('panning');
+      if (!container._leftDragPanning) {
+        // It was a genuine click — handle game logic
+        const pt = canvasPoint(e.clientX, e.clientY);
+        onMapClickAt(pt.x, pt.y);
+      }
+      container._leftDragPanning = false;
+    }
+  });
+
+  container.addEventListener('mouseleave', () => {
+    isPanning = false;
+    container._leftDragPanning = false;
+    container.classList.remove('panning');
+    document.getElementById('tooltip').classList.remove('visible');
+  });
+
+  container.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Initial fit
+  requestAnimationFrame(resetView);
+}
+
+function render() {
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background
+  ctx.fillStyle = '#0a0604';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw hexes
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      drawHex(c, r);
+    }
+  }
+
+  // Draw reachable cells highlight
+  if (game.selected) {
+    const sel = game.selected;
+    if (sel.type === 'unit' && !sel.unit.moved && sel.unit.faction === game.currentPlayer && game.phase === 'move') {
+      drawReachable(sel.unit);
+    }
+  }
+
+  // Draw units
+  game.units.filter(u => u.alive).forEach(u => drawUnit(u));
+
+  // Draw selected highlight
+  if (game.selected && game.selected.type === 'unit') {
+    const u = game.selected.unit;
+    const { x, y } = hexToPixel(u.col, u.row);
+    ctx.save();
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur = 12;
+    const pts = hexCorners(x, y, HEX_SIZE - 2);
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawHex(col, row) {
+  const { x, y } = hexToPixel(col, row);
+  const cell = game.grid[`${col},${row}`];
+  const pts = hexCorners(x, y, HEX_SIZE);
+
+  ctx.save();
+
+  // Fill
+  let fillColor = TERRAIN_COLORS[cell.type] || '#c0d090';
+  ctx.fillStyle = fillColor;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  ctx.fill();
+
+  // Road overlay
+  if (cell.road) {
+    ctx.fillStyle = 'rgba(180,144,72,0.4)';
+    ctx.fill();
+    // Draw road lines
+    ctx.strokeStyle = 'rgba(200,160,60,0.6)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x - HEX_SIZE * 0.6, y);
+    ctx.lineTo(x + HEX_SIZE * 0.6, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Bridge marker
+  if (cell.bridge) {
+    ctx.strokeStyle = '#c8a040';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y);
+    ctx.lineTo(x + 10, y);
+    ctx.stroke();
+  }
+
+  // Border
+  ctx.strokeStyle = 'rgba(90,64,32,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  ctx.stroke();
+
+  // City/fortress symbol
+  if (cell.type === T.CITY) {
+    ctx.fillStyle = cell.owner === 'orf' ? 'rgba(26,58,92,0.6)' : 'rgba(107,26,26,0.6)';
+    ctx.fillRect(x - 8, y - 8, 16, 16);
+    ctx.strokeStyle = cell.owner === 'orf' ? '#orf-gold' : '#888';
+    ctx.strokeStyle = '#c8a820';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 8, y - 8, 16, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏙', x, y);
+    if (cell.name) {
+      ctx.fillStyle = '#f0e0b0';
+      ctx.font = 'bold 8px Cinzel, serif';
+      ctx.fillText(cell.name, x, y + HEX_SIZE * 0.65);
+    }
+  } else if (cell.type === T.FORTRESS) {
+    ctx.fillStyle = '#f0e0b0';
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏰', x, y);
+    if (cell.name) {
+      ctx.fillStyle = '#d0c0a0';
+      ctx.font = 'bold 10px Cinzel, serif';
+      ctx.fillText(cell.name, x, y + HEX_SIZE * 0.65);
+    }
+  } else if (cell.type === T.FOREST) {
+    ctx.font = '14px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🌲', x, y);
+  } else if (cell.type === T.HILLS) {
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⛰', x, y);
+  }
+
+  // Coord
+  ctx.fillStyle = 'rgba(100,80,50,0.5)';
+  ctx.font = '7px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`${col},${row}`, x, y - HEX_SIZE + 2);
+
+  ctx.restore();
+}
+
+function drawReachable(unit) {
+  const reachable = getReachableCells(unit);
+  reachable.forEach(({ col, row }) => {
+    const { x, y } = hexToPixel(col, row);
+    const pts = hexCorners(x, y, HEX_SIZE);
+    ctx.save();
+    ctx.fillStyle = 'rgba(100,180,100,0.25)';
+    ctx.strokeStyle = 'rgba(100,255,100,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // Draw attackable enemies
+  const attackable = getAttackableEnemies(unit);
+  attackable.forEach(enemy => {
+    const { x, y } = hexToPixel(enemy.col, enemy.row);
+    const pts = hexCorners(x, y, HEX_SIZE);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,80,80,0.9)';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(255,80,80,0.7)';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawUnit(unit) {
+  const { x, y } = hexToPixel(unit.col, unit.row);
+  const isOrf = unit.faction === 'orf';
+  const isSelected = game.selected && game.selected.type === 'unit' && game.selected.unit.id === unit.id;
+  const isMoved = unit.moved;
+
+  ctx.save();
+
+  // Shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+
+  // Counter body
+  const cw = 28, ch = 28;
+  const bgColor = isOrf ? '#1a3a5c' : '#6b1a1a';
+  const borderColor = isOrf ? '#c8a820' : '#8a8a8a';
+
+  ctx.fillStyle = isMoved ? (isOrf ? '#0d1d2e' : '#351010') : bgColor;
+  ctx.fillRect(x - cw/2, y - ch/2, cw, ch);
+  ctx.strokeStyle = isSelected ? '#ffff00' : borderColor;
+  ctx.lineWidth = isSelected ? 2 : 1;
+  ctx.strokeRect(x - cw/2, y - ch/2, cw, ch);
+
+  ctx.shadowColor = 'transparent';
+
+  // Unit symbol
+  const symbols = { inf: '▬', cav: '↗', art: '●', duc: '♔' };
+  ctx.fillStyle = isMoved ? 'rgba(200,200,200,0.4)' : (isOrf ? '#c8a820' : '#cccccc');
+  ctx.font = 'bold 11px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(symbols[unit.type] || '?', x, y - 2);
+
+  // Stats
+  ctx.fillStyle = isMoved ? 'rgba(150,150,150,0.5)' : (isOrf ? '#e8c840' : '#e0e0e0');
+  ctx.font = 'bold 7px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(unit.attack, x - cw/2 + 2, y + ch/2 - 4);
+  ctx.textAlign = 'right';
+  ctx.fillText(unit.move, x + cw/2 - 2, y + ch/2 - 4);
+
+  // Faction tag
+  ctx.fillStyle = isOrf ? 'rgba(200,168,32,0.2)' : 'rgba(138,138,138,0.2)';
+  ctx.fillRect(x - cw/2, y - ch/2, cw, 8);
+  ctx.fillStyle = isOrf ? '#e8c840' : '#c0c0c0';
+  ctx.font = '5px Cinzel, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(isOrf ? 'ORF' : 'WULF', x, y - ch/2 + 5);
+
+  // Range indicator for artillery
+  if (unit.type === 'art') {
+    ctx.fillStyle = isOrf ? 'rgba(200,168,32,0.7)' : 'rgba(180,180,180,0.7)';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText('2', x + cw/2 - 1, y - ch/2 + 1);
+  }
+
+  // Attacked indicator
+  if (unit.attacked) {
+    ctx.fillStyle = 'rgba(255,100,100,0.6)';
+    ctx.fillRect(x - cw/2, y - ch/2, cw, ch);
+    ctx.fillStyle = '#ff8080';
+    ctx.font = 'bold 12px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✗', x, y);
+  }
+
+  // Duke aura (if duc nearby allies)
+  if (unit.type === 'duc') {
+    ctx.strokeStyle = isOrf ? 'rgba(200,168,32,0.3)' : 'rgba(180,180,180,0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(x, y, HEX_SIZE * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME LOGIC
+// ═══════════════════════════════════════════════════════
+
+function getUnitAt(col, row) {
+  return game.units.find(u => u.alive && u.col === col && u.row === row);
+}
+
+function isDucNearby(unit) {
+  const duc = game.units.find(u => u.alive && u.faction === unit.faction && u.type === 'duc');
+  if (!duc) return false;
+  return hexDistance(unit.col, unit.row, duc.col, duc.row) <= 2;
+}
+
+function getEffectiveAttack(unit) {
+  let base = unit.attack;
+  if (isDucNearby(unit)) base *= 2;
+  return base;
+}
+
+function getEffectiveDefense(unit) {
+  let base = unit.attack; // same as attack for defense
+  if (isDucNearby(unit)) base *= 2;
+  const cell = game.grid[`${unit.col},${unit.row}`];
+  if (cell.type === T.CITY) base *= 2;
+  if (cell.type === T.FORTRESS) base *= 3;
+  return base;
+}
+
+function getReachableCells(unit) {
+  const reachable = [];
+  const maxMoves = unit.move;
+  const visited = {};
+  const queue = [{ col: unit.col, row: unit.row, movesLeft: maxMoves }];
+  visited[`${unit.col},${unit.row}`] = true;
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const neighbors = hexNeighbors(current.col, current.row);
+
+    for (const nb of neighbors) {
+      const key = `${nb.col},${nb.row}`;
+      if (visited[key]) continue;
+
+      const cell = game.grid[key];
+      if (!cell) continue;
+      if (cell.type === T.RIVER && !cell.bridge) continue;
+      if (cell.type === T.LAKE) continue;
+
+      // Check for enemy unit in the way (can pass through friendly, not enemy)
+      const occupant = getUnitAt(nb.col, nb.row);
+      if (occupant && occupant.faction !== unit.faction) {
+        // Can enter enemy ZOC but must stop — don't add to moveable destinations
+        continue;
+      }
+
+      // Movement cost
+      let cost = TERRAIN_MOVE_COST[cell.type] || 1;
+      if (cell.road) cost = Math.min(cost, 0.5);
+      if (cell.bridge) cost = 1;
+
+      const newMoves = current.movesLeft - cost;
+      if (newMoves >= 0) {
+        visited[key] = true;
+        if (!occupant) { // Can only stop on empty cells
+          reachable.push({ col: nb.col, row: nb.row });
+        }
+        queue.push({ col: nb.col, row: nb.row, movesLeft: newMoves });
+      }
+    }
+  }
+  return reachable;
+}
+
+function getAttackableEnemies(unit) {
+  const enemies = [];
+  game.units.filter(u => u.alive && u.faction !== unit.faction).forEach(enemy => {
+    const dist = hexDistance(unit.col, unit.row, enemy.col, enemy.row);
+    if (dist <= unit.range) {
+      enemies.push(enemy);
+    }
+  });
+  return enemies;
+}
+
+function isInEnemyZOC(col, row, faction) {
+  const enemies = game.units.filter(u => u.alive && u.faction !== faction);
+  return enemies.some(e => {
+    const dist = hexDistance(col, row, e.col, e.row);
+    return dist === 1;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  COMBAT SYSTEM
+// ═══════════════════════════════════════════════════════
+
+// Combat results table: [ratio_index][die_1..6]
+// Ratios: 1/5, 1/4, 1/3, 1/2, 1/1, 2/1, 3/1, 4/1, 5/1, 6/1
+const COMBAT_TABLE = {
+  // ratio_key -> [result for die 1,2,3,4,5,6]
+  '0.2':  ['AR','AE','AE','AE','AE','AE'],
+  '0.25': ['AR','AR','AE','AE','AE','AE'],
+  '0.33': ['DR','AR','AR','AR','AE','AE'],
+  '0.5':  ['DR','DR','AR','AR','AR','AR'],
+  '1':    ['DR','DR','DR','AR','AR','AR'],
+  '2':    ['DR','DR','DR','DR','AR','AR'],
+  '3':    ['DR','DR','DR','DR','DR','AR'],
+  '4':    ['DE','DR','DR','DR','DR','EX'],
+  '5':    ['DE','DE','DE','DR','DR','EX'],
+  '6':    ['DE','DE','DE','DE','EX','EX'],
+};
+
+const TERRAIN_DIE_MOD = {
+  forest: -1, hills: -1, fortress: -2, plain: 0, city: 0,
+  road: 0, river: 0, lake: 0,
+};
+
+let pendingCombatData = null;
+
+function startCombat(attacker, defender) {
+  if (attacker.attacked) { addLog(`${attacker.name} a déjà attaqué ce tour.`, 'system'); return; }
+  if (attacker.type === 'duc') { addLog('Le duc ne peut pas attaquer directement.', 'system'); return; }
+
+  const atkPower = getEffectiveAttack(attacker);
+  const defPower = getEffectiveDefense(defender);
+
+  let ratio = atkPower / defPower;
+  // Clamp ratio
+  if (ratio < 0.2) ratio = 0.2;
+  if (ratio > 6) ratio = 6;
+
+  // Find nearest ratio key
+  const ratioKeys = [0.2, 0.25, 0.33, 0.5, 1, 2, 3, 4, 5, 6];
+  let bestKey = ratioKeys[0];
+  for (const k of ratioKeys) {
+    if (Math.abs(k - ratio) < Math.abs(bestKey - ratio)) bestKey = k;
+  }
+
+  const defCell = game.grid[`${defender.col},${defender.row}`];
+  const terrainMod = TERRAIN_DIE_MOD[defCell.type] || 0;
+
+  pendingCombatData = {
+    attacker,
+    defender,
+    atkPower,
+    defPower,
+    ratioKey: bestKey,
+    terrainMod,
+    ratio,
+    rolled: false,
+    result: null,
+    dieValue: null,
+  };
+
+  // Show modal
+  document.getElementById('atk-power').textContent = atkPower;
+  document.getElementById('def-power').textContent = defPower;
+  document.getElementById('atk-name').textContent = attacker.name;
+  document.getElementById('def-name').textContent = defender.name;
+  const ratioStr = ratio >= 1 ? `${Math.round(ratio)}:1` : `1:${Math.round(1/ratio)}`;
+  document.getElementById('combat-ratio-text').textContent = `Rapport: ${ratioStr}${terrainMod !== 0 ? ` (mod dé: ${terrainMod})` : ''}`;
+  document.getElementById('dice-result').textContent = '—';
+  document.getElementById('result-text').textContent = '';
+  document.getElementById('result-detail').textContent = '';
+  document.getElementById('btn-roll').style.display = '';
+  document.getElementById('btn-cancel-combat').style.display = '';
+  document.getElementById('btn-apply').style.display = 'none';
+  document.getElementById('combat-modal').classList.add('active');
+}
+
+function rollCombatDie() {
+  if (!pendingCombatData) return;
+  const raw = Math.floor(Math.random() * 6) + 1;
+  const modified = Math.max(1, Math.min(6, raw + pendingCombatData.terrainMod));
+  pendingCombatData.dieValue = modified;
+  pendingCombatData.rolled = true;
+
+  const tableKey = pendingCombatData.ratioKey.toString();
+  const row = COMBAT_TABLE[tableKey] || COMBAT_TABLE['1'];
+  const result = row[modified - 1];
+  pendingCombatData.result = result;
+
+  const dieFaces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  let diceDisplay = dieFaces[raw - 1];
+  if (pendingCombatData.terrainMod !== 0) diceDisplay += ` → ${dieFaces[modified - 1]}`;
+  document.getElementById('dice-result').textContent = diceDisplay;
+
+  const resultNames = {
+    'AE': 'ATTAQUANT ÉLIMINÉ',
+    'AR': 'ATTAQUANT RECULE',
+    'DR': 'DÉFENSEUR RECULE',
+    'DE': 'DÉFENSEUR ÉLIMINÉ',
+    'EX': 'ÉCHANGE',
+  };
+  const resultColors = {
+    'AE': '#ff6060', 'AR': '#ff8080',
+    'DR': '#80a0ff', 'DE': '#6080ff', 'EX': '#c8a820'
+  };
+  document.getElementById('result-text').textContent = resultNames[result] || result;
+  document.getElementById('result-text').style.color = resultColors[result] || 'white';
+
+  const details = {
+    'AE': 'Les unités attaquantes sont retirées du jeu.',
+    'AR': 'Les unités attaquantes reculent d\'une case.',
+    'DR': 'Les unités de défense reculent d\'une case.',
+    'DE': 'Les unités de défense sont retirées du jeu.',
+    'EX': 'Les deux unités sont éliminées.',
+  };
+  document.getElementById('result-detail').textContent = details[result] || '';
+
+  document.getElementById('btn-roll').style.display = 'none';
+  document.getElementById('btn-cancel-combat').style.display = 'none';
+  document.getElementById('btn-apply').style.display = '';
+
+  addLog(`Combat: ${pendingCombatData.attacker.name} (${pendingCombatData.atkPower}) vs ${pendingCombatData.defender.name} (${pendingCombatData.defPower}) — Dé: ${raw}${pendingCombatData.terrainMod !== 0 ? `→${modified}` : ''} — ${result}`, 'combat');
+}
+
+function applyCombatResult() {
+  if (!pendingCombatData || !pendingCombatData.result) return;
+  const { attacker, defender, result } = pendingCombatData;
+  attacker.attacked = true;
+
+  switch (result) {
+    case 'AE':
+      removeUnit(attacker);
+      break;
+    case 'AR':
+      retreatUnit(attacker, defender.col, defender.row);
+      break;
+    case 'DE':
+      removeUnit(defender);
+      break;
+    case 'DR':
+      retreatUnit(defender, attacker.col, attacker.row);
+      break;
+    case 'EX':
+      removeUnit(defender);
+      removeUnit(attacker);
+      break;
+  }
+
+  closeCombatModal();
+  checkVictory();
+  render();
+  updateUI();
+}
+
+function removeUnit(unit) {
+  unit.alive = false;
+  addLog(`${unit.name} est éliminé!`, 'combat');
+  if (unit.type === 'duc') {
+    const winner = unit.faction === 'orf' ? 'Wulfenburg' : 'Orfburg';
+    showVictory(winner, 'totale', `Le duc ${unit.faction === 'orf' ? 'd\'Orfburg' : 'de Wulfenburg'} a été éliminé!`);
+  }
+}
+
+function retreatUnit(unit, awayFromCol, awayFromRow) {
+  const neighbors = hexNeighbors(unit.col, unit.row);
+  // Find cell farthest from attacker, accessible
+  let bestCell = null;
+  let bestDist = -1;
+  for (const nb of neighbors) {
+    const cell = game.grid[`${nb.col},${nb.row}`];
+    if (!cell) continue;
+    if (cell.type === T.RIVER && !cell.bridge) continue;
+    if (cell.type === T.LAKE) continue;
+    if (getUnitAt(nb.col, nb.row)) continue;
+    if (isInEnemyZOC(nb.col, nb.row, unit.faction)) continue;
+    const d = hexDistance(nb.col, nb.row, awayFromCol, awayFromRow);
+    if (d > bestDist) { bestDist = d; bestCell = nb; }
+  }
+  if (bestCell) {
+    unit.col = bestCell.col;
+    unit.row = bestCell.row;
+    addLog(`${unit.name} recule en (${bestCell.col},${bestCell.row}).`, 'move');
+  } else {
+    // Nowhere to retreat — eliminated
+    removeUnit(unit);
+    addLog(`${unit.name} ne peut pas reculer et est éliminé!`, 'combat');
+  }
+}
+
+function closeCombatModal() {
+  document.getElementById('combat-modal').classList.remove('active');
+  pendingCombatData = null;
+  game.selected = null;
+  render();
+}
+
+// ═══════════════════════════════════════════════════════
+//  VICTORY CHECK
+// ═══════════════════════════════════════════════════════
+
+function checkVictory() {
+  // Check duke elimination (handled in removeUnit)
+  // Check capital capture
+  const orfCapital = game.grid['1,6'];
+  const wulfCapital = game.grid['16,5'];
+  const kaiserburg = game.grid['9,5'];
+
+  const unitAtKaiser = getUnitAt(9, 5);
+  const unitAtOrf = getUnitAt(1, 6);
+  const unitAtWulf = getUnitAt(16, 5);
+
+  if (unitAtWulf && unitAtWulf.faction === 'orf') {
+    showVictory('Orfburg', 'totale', 'La capitale de Wulfenburg est tombée aux mains d\'Orfburg!');
+  }
+  if (unitAtOrf && unitAtOrf.faction === 'wulf') {
+    showVictory('Wulfenburg', 'totale', 'La capitale d\'Orfburg est tombée aux mains de Wulfenburg!');
+  }
+
+  // Marginal: ORF controls Kaiserburg AND "two rivers territory"
+  if (unitAtKaiser && unitAtKaiser.faction === 'orf') {
+    // Check if ORF also controls territory between rivers (cols 8-11, rows 4-8)
+    const orfControlsTerritory = game.units.filter(u => u.alive && u.faction === 'orf')
+      .some(u => u.col >= 9 && u.col <= 11 && u.row >= 4 && u.row <= 8);
+    if (orfControlsTerritory) {
+      showVictory('Orfburg', 'marginale', 'Orfburg contrôle Kaiserburg et le territoire des deux rivières!');
+    }
+  }
+
+  // Turn limit
+  if (game.turn > game.maxTurns) {
+    showVictory('Wulfenburg', 'marginale', 'Le temps est écoulé! Wulfenburg a résisté à l\'offensive d\'Orfburg.');
+  }
+}
+
+function showVictory(faction, type, detail) {
+  document.getElementById('victory-crown').textContent = faction === 'Orfburg' ? '⚜' : '🐺';
+  document.getElementById('victory-title').textContent = `VICTOIRE ${type.toUpperCase()}`;
+  document.getElementById('victory-subtitle').textContent = `DUCHÉ DE ${faction.toUpperCase()}`;
+  document.getElementById('victory-detail').textContent = detail;
+  document.getElementById('victory-modal').classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+//  INPUT HANDLING
+// ═══════════════════════════════════════════════════════
+
+function onMapClickAt(px, py) {
+  // Find hex
+  let clickedCol = -1, clickedRow = -1, bestDist = Infinity;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const { x, y } = hexToPixel(c, r);
+      const d = Math.sqrt((px - x) ** 2 + (py - y) ** 2);
+      if (d < bestDist) { bestDist = d; clickedCol = c; clickedRow = r; }
+    }
+  }
+  if (bestDist > HEX_SIZE * 1.1) return;
+
+  const clickedUnit = getUnitAt(clickedCol, clickedRow);
+
+  // Phase: movement
+  if (game.phase === 'move') {
+    if (game.selected && game.selected.type === 'unit') {
+      const selUnit = game.selected.unit;
+
+      // Click enemy unit = try combat (if adjacent/range)
+      if (clickedUnit && clickedUnit.faction !== game.currentPlayer) {
+        const dist = hexDistance(selUnit.col, selUnit.row, clickedUnit.col, clickedUnit.row);
+        if (dist <= selUnit.range && selUnit.type !== 'duc') {
+          startCombat(selUnit, clickedUnit);
+          return;
+        } else {
+          addLog('Trop loin pour attaquer!', 'system');
+          return;
+        }
+      }
+
+      // Click empty cell = move there
+      if (!clickedUnit) {
+        const reachable = getReachableCells(selUnit);
+        const canReach = reachable.some(r => r.col === clickedCol && r.row === clickedRow);
+        if (canReach && !selUnit.moved) {
+          selUnit.col = clickedCol;
+          selUnit.row = clickedRow;
+          selUnit.moved = true;
+          addLog(`${selUnit.name} se déplace en (${clickedCol},${clickedRow}).`, 'move');
+          game.selected = null;
+          render();
+          updateUI();
+          return;
+        }
+      }
+
+      // Click own unit = select it
+      if (clickedUnit && clickedUnit.faction === game.currentPlayer) {
+        game.selected = { type: 'unit', unit: clickedUnit };
+        render();
+        updateSelectedInfo(clickedUnit);
+        return;
+      }
+
+      game.selected = null;
+      render();
+      return;
+    }
+
+    // Select own unit
+    if (clickedUnit && clickedUnit.faction === game.currentPlayer) {
+      game.selected = { type: 'unit', unit: clickedUnit };
+      render();
+      updateSelectedInfo(clickedUnit);
+    } else {
+      game.selected = null;
+      render();
+    }
+    return;
+  }
+}
+
+function onMapHover(e) {
+  const { x: px, y: py } = canvasPoint(e.clientX, e.clientY);
+
+  let hovCol = -1, hovRow = -1, bestDist = Infinity;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const { x, y } = hexToPixel(c, r);
+      const d = Math.sqrt((px - x) ** 2 + (py - y) ** 2);
+      if (d < bestDist) { bestDist = d; hovCol = c; hovRow = r; }
+    }
+  }
+
+  const tip = document.getElementById('tooltip');
+  if (bestDist > HEX_SIZE) { tip.classList.remove('visible'); return; }
+
+  const cell = game.grid[`${hovCol},${hovRow}`];
+  const unit = getUnitAt(hovCol, hovRow);
+  let html = `<strong>${hovCol},${hovRow}</strong><br>`;
+  html += `Terrain: ${cell.type}`;
+  if (cell.name) html += `<br>🏙 ${cell.name}`;
+  if (cell.road) html += `<br>🛣 Route`;
+  if (cell.bridge) html += `<br>🌉 Pont`;
+  if (unit) {
+    const typeNames = { inf: 'Infanterie', cav: 'Cavalerie', art: 'Artillerie', duc: 'Duc' };
+    html += `<br><br><strong>${unit.name}</strong><br>${typeNames[unit.type]}<br>Atk:${unit.attack} Mvt:${unit.move}`;
+    if (isDucNearby(unit)) html += `<br>⚜ Fanatisé (×2)!`;
+  }
+
+  tip.innerHTML = html;
+  tip.style.left = (e.clientX + 14) + 'px';
+  tip.style.top = (e.clientY - 10) + 'px';
+  tip.classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════
+//  UI UPDATES
+// ═══════════════════════════════════════════════════════
+
+function updateSelectedInfo(unit) {
+  const el = document.getElementById('selected-info');
+  const typeNames = { inf: 'Infanterie', cav: 'Cavalerie', art: 'Artillerie', duc: 'Duc' };
+  const cell = game.grid[`${unit.col},${unit.row}`];
+  const ducBonus = isDucNearby(unit) ? ' <span style="color:#ffd700">⚜×2</span>' : '';
+  el.innerHTML = `
+    <div class="sel-name">${unit.name}</div>
+    <div style="font-size:10px;color:var(--parchment-dark);margin-bottom:6px">${typeNames[unit.type]} — ${unit.faction === 'orf' ? 'Orfburg' : 'Wulfenburg'}</div>
+    <div class="sel-stats">
+      <div class="sel-stat">Atk: <span>${unit.attack}</span>${ducBonus}</div>
+      <div class="sel-stat">Mvt: <span>${unit.move}</span></div>
+      ${unit.type === 'art' ? '<div class="sel-stat">Portée: <span>2</span></div>' : ''}
+    </div>
+    <div style="font-size:10px;color:var(--parchment-dark);margin-top:4px">
+      Pos: (${unit.col},${unit.row}) — ${cell.type}${cell.name ? ' — ' + cell.name : ''}
+    </div>
+    <div style="font-size:10px;margin-top:3px">
+      ${unit.moved ? '<span style="color:#ff8080">✓ Déplacé</span>' : '<span style="color:#80ff80">Peut bouger</span>'}
+      ${unit.attacked ? ' <span style="color:#ff8080">✓ Attaqué</span>' : ''}
+    </div>
+  `;
+}
+
+function updateUI() {
+  // Turn display
+  document.getElementById('turn-display').textContent = `${game.turn} / ${game.maxTurns}`;
+
+  // Phase badge
+  const badge = document.getElementById('phase-badge');
+  badge.textContent = `Phase ${game.currentPlayer.toUpperCase()} — Mouvement`;
+  badge.className = `status-phase ${game.currentPlayer}`;
+
+  // Unit counts
+  const orfAlive = game.units.filter(u => u.alive && u.faction === 'orf').length;
+  const wulfAlive = game.units.filter(u => u.alive && u.faction === 'wulf').length;
+  document.getElementById('orf-units-count').textContent = `${orfAlive} unités`;
+  document.getElementById('wulf-units-count').textContent = `${wulfAlive} unités`;
+
+  // Unit lists
+  updateUnitList('orf');
+  updateUnitList('wulf');
+}
+
+function updateUnitList(faction) {
+  const container = document.getElementById(`${faction}-unit-list`);
+  container.innerHTML = '';
+  const typeSymbols = { inf: '▬', cav: '↗', art: '●', duc: '♔' };
+  game.units.filter(u => u.faction === faction).forEach(unit => {
+    const el = document.createElement('div');
+    el.className = `unit-item${unit.alive ? '' : ' moved'}${game.selected && game.selected.type === 'unit' && game.selected.unit.id === unit.id ? ' selected' : ''}`;
+    if (!unit.alive) el.style.opacity = '0.3';
+    if (unit.moved && unit.alive) el.classList.add('moved');
+
+    el.innerHTML = `
+      <div class="unit-symbol ${faction}">${typeSymbols[unit.type]}</div>
+      <div class="unit-info">
+        <div style="color:var(--parchment-light)">${unit.name.replace(faction === 'orf' ? 'Inf ORF' : 'Inf WULF', '').replace('Cav ORF','').replace('Cav WULF','').replace('Art ORF','').replace('Art WULF','') || unit.name}</div>
+        <div class="unit-stats">${unit.alive ? `(${unit.col},${unit.row}) Atk:${unit.attack} Mvt:${unit.move}` : 'ÉLIMINÉ'}</div>
+      </div>
+    `;
+    if (unit.alive) {
+      el.addEventListener('click', () => {
+        if (unit.faction === game.currentPlayer) {
+          game.selected = { type: 'unit', unit };
+          render();
+          updateSelectedInfo(unit);
+        }
+      });
+    }
+    container.appendChild(el);
+  });
+}
+
+// END PHASE
+document.getElementById('btn-end-phase').addEventListener('click', () => {
+  // Reset moved/attacked for current player
+  game.units.filter(u => u.faction === game.currentPlayer).forEach(u => {
+    u.moved = false;
+    u.attacked = false;
+  });
+
+  if (game.currentPlayer === 'orf') {
+    game.currentPlayer = 'wulf';
+    addLog('--- Tour Wulfenburg ---', 'system');
+  } else {
+    game.currentPlayer = 'orf';
+    game.turn++;
+    addLog(`=== Tour ${game.turn} ===`, 'system');
+    if (game.turn > game.maxTurns) {
+      checkVictory();
+      return;
+    }
+  }
+  game.selected = null;
+  render();
+  updateUI();
+});
+
+function addLog(msg, type = 'move') {
+  const el = document.getElementById('info-log');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.textContent = msg;
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+  game.log.push({ msg, type });
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+
+window.addEventListener('load', () => {
+  initCanvas();
+  initGame();
+});
+</script>
+</body>
+</html>
