@@ -239,6 +239,25 @@
     box-shadow: 0 0 10px rgba(200,168,32,0.4);
   }
 
+  #btn-save, #btn-load {
+    margin-left: 8px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #2a1a0a, #4a2a1a);
+    border: 1px solid var(--parchment-dark);
+    color: var(--parchment-light);
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  #btn-save:hover, #btn-load:hover {
+    background: linear-gradient(135deg, #4a2a1a, #6a3a2a);
+    border-color: var(--gold-accent);
+    color: var(--gold-accent);
+  }
+
   /* MAP AREA */
   #map-container {
     flex: 1;
@@ -761,7 +780,7 @@ function buildMap() {
     [2,3],[2,4],[3,4],[4,5],[5,5],
 
     [5,4],[5,3],[5,2],
-    [3,5],[3,6],[3,7],[3,8],[2,9],[2,10],[1,10],[1,11],[1,12],[1,13],[1,14],[1,15],[1,16],[1,17],[1,18],[1,19],[1,20],[0,21],[0,22],
+    [3,0],[3,5],[3,6],[3,7],[3,8],[2,9],[2,10],[1,10],[1,11],[1,12],[2,13],[1,14],[1,15],[1,16],[1,17],[1,18],[1,19],[1,20],[0,21],[0,22],
 
     [6,7],[7,7],[8,8],[9,8],[10,9],[11,9],[12,10],[13,10],
     [7,8],[7,9],[7,10],[7,11],[7,12],[7,13],
@@ -778,7 +797,7 @@ function buildMap() {
     [21,5],[21,4],[22,4],
   
     [14,12],[15,12],[16,13],[17,13],[18,14],[18,15],[19,15],[19,16],[20,17],[21,17],[22,18],[23,18],
-    [24,19],[25,19],[26,20],[28,21],
+    [24,19],[25,19],[26,20],
 
     [8,15],[9,15],[10,15],[11,14],[13,13],[14,13],
     [14,16],[15,15],[16,15],[17,14],
@@ -989,10 +1008,6 @@ function hexCorners(cx, cy, size) {
 
 function hexNeighbors(col, row) {
   const odd = !(col % 2 === 1);
-  // const dirs = odd
-  //   ? [[-1,0],[1,0],[-1,1],[1,1],[0,-1],[0,1]]
-  //   : [[-1,0],[1,0],[-1,-1],[1,-1],[0,-1],[0,1]];
-  console.log(odd)
   const dirs = odd
     ? [[-1,-1],[1,0],[-1,0],[1,-1],[0,-1],[0,1]]
     : [[-1,0],[1,0],[-1,1],[1,1],[0,-1],[0,1]];
@@ -1227,12 +1242,15 @@ function drawHex(col, row) {
   ctx.closePath();
   ctx.fill();
  
+  const thisCell = game.grid[`${col},${row}`];
+
+
   // Road connections: straight stub (1 neighbour) or smooth curves (2+ neighbours)
   const isRoadCell = (c, r) => {
     const g = game.grid[`${c},${r}`];
     return g && (g.road || g.type === T.CITY || g.type === T.FORTRESS || g.bridge);
   };
-  if (isRoadCell(col, row)) {
+  if (isRoadCell(col, row) && thisCell.type !== T.CITY && thisCell.type !== T.FORTRESS ) {
     const roadNeighbors = hexNeighbors(col, row).filter(nb => isRoadCell(nb.col, nb.row));
     if (roadNeighbors.length > 0) {
       // Edge midpoints: halfway between this hex center and each road-neighbour center
@@ -1242,8 +1260,9 @@ function drawHex(col, row) {
       });
  
       const drawRoadPath = (strokeColor, lineW) => {
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = lineW+6;
+        ctx.strokeStyle = "#333333";
+        ctx.fillStyle = strokeColor;
+        ctx.lineWidth = lineW+8;
         ctx.lineCap = 'round';
         if (roadNeighbors.length === 1) {
           // Single stub: straight line from edge midpoint to hex center
@@ -1353,132 +1372,12 @@ function drawHex(col, row) {
   }
  
   // Coord
-  ctx.fillStyle = 'rgba(100,80,50,0.5)';
-  ctx.font = '7px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText(`${col},${row}`, x, y - HEX_SIZE + 2);
+  // ctx.fillStyle = 'rgba(100,80,50,0.5)';
+  // ctx.font = '7px monospace';
+  // ctx.textAlign = 'center';
+  // ctx.textBaseline = 'top';
+  // ctx.fillText(`${col},${row}`, x, y - HEX_SIZE + 2);
  
-  ctx.restore();
-}
-
-function drawHexOld(col, row) {
-  const { x, y } = hexToPixel(col, row);
-  const cell = game.grid[`${col},${row}`];
-  const pts = hexCorners(x, y, HEX_SIZE);
-
-  ctx.save();
-
-  // Fill
-  let fillColor = TERRAIN_COLORS[cell.type] || '#c0d090';
-  ctx.fillStyle = fillColor;
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-  ctx.closePath();
-  ctx.fill();
-
-  // Road connections — draw a line from center toward each road/city/fortress neighbour
-  const isRoadCell = (c, r) => {
-    const g = game.grid[`${c},${r}`];
-    return g && (g.road || g.type === T.CITY || g.type === T.FORTRESS || g.bridge);
-  };
-  if (isRoadCell(col, row)) {
-    const roadNeighbors = hexNeighbors(col, row).filter(nb => isRoadCell(nb.col, nb.row));
-    if (roadNeighbors.length > 0) {
-      ctx.save();
-      ctx.lineCap = 'round';
-      // Casing (dark outline)
-      ctx.strokeStyle = 'rgba(90,55,10,0.8)';
-      ctx.lineWidth = 4.5;
-      for (const nb of roadNeighbors) {
-        const { x: nx, y: ny } = hexToPixel(nb.col, nb.row);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo((x + nx) / 2, (y + ny) / 2);
-        ctx.stroke();
-      }
-      // Road surface
-      ctx.strokeStyle = '#d4a030';
-      ctx.lineWidth = 2.5;
-      for (const nb of roadNeighbors) {
-        const { x: nx, y: ny } = hexToPixel(nb.col, nb.row);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo((x + nx) / 2, (y + ny) / 2);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  }
-
-  // Bridge marker
-  if (cell.bridge) {
-    ctx.strokeStyle = '#c8a040';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(x - 10, y);
-    ctx.lineTo(x + 10, y);
-    ctx.stroke();
-  }
-
-  // Border
-  ctx.strokeStyle = 'rgba(90,64,32,0.5)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-  ctx.closePath();
-  ctx.stroke();
-
-  // City/fortress symbol
-  if (cell.type === T.CITY) {
-    ctx.fillStyle = cell.owner === 'orf' ? 'rgba(26,58,92,0.6)' : 'rgba(107,26,26,0.6)';
-    ctx.fillRect(x - 8, y - 8, 16, 16);
-    ctx.strokeStyle = cell.owner === 'orf' ? '#orf-gold' : '#888';
-    ctx.strokeStyle = '#c8a820';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x - 8, y - 8, 16, 16);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '10px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🏙', x, y);
-    if (cell.name) {
-      ctx.fillStyle = '#f0e0b0';
-      ctx.font = 'bold 8px Cinzel, serif';
-      ctx.fillText(cell.name, x, y + HEX_SIZE * 0.65);
-    }
-  } else if (cell.type === T.FORTRESS) {
-    ctx.fillStyle = '#f0e0b0';
-    ctx.font = '12px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🏰', x, y);
-    if (cell.name) {
-      ctx.fillStyle = '#d0c0a0';
-      ctx.font = 'bold 10px Cinzel, serif';
-      ctx.fillText(cell.name, x, y + HEX_SIZE * 0.65);
-    }
-  } else if (cell.type === T.FOREST) {
-    ctx.font = '14px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🌲', x, y);
-  } else if (cell.type === T.HILLS) {
-    ctx.font = '12px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('⛰', x, y);
-  }
-
-  // Coord
-  ctx.fillStyle = 'rgba(100,80,50,0.5)';
-  ctx.font = '7px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText(`${col},${row}`, x, y - HEX_SIZE + 2);
-
   ctx.restore();
 }
 
@@ -1534,7 +1433,7 @@ function drawUnit(unit) {
   ctx.shadowOffsetY = 2;
 
   // Counter body
-  const cw = 28, ch = 28;
+  const cw = 38, ch = 38;
   const bgColor = isOrf ? '#1a3a5c' : '#6b1a1a';
   const borderColor = isOrf ? '#c8a820' : '#8a8a8a';
 
@@ -1549,14 +1448,14 @@ function drawUnit(unit) {
   // Unit symbol
   const symbols = { inf: '▬', cav: '↗', art: '●', duc: '♔' };
   ctx.fillStyle = isMoved ? 'rgba(200,200,200,0.4)' : (isOrf ? '#c8a820' : '#cccccc');
-  ctx.font = 'bold 11px serif';
+  ctx.font = 'bold 21px serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(symbols[unit.type] || '?', x, y - 2);
+  ctx.fillText(symbols[unit.type] || '?', x, y+2 );
 
   // Stats
   ctx.fillStyle = isMoved ? 'rgba(150,150,150,0.5)' : (isOrf ? '#e8c840' : '#e0e0e0');
-  ctx.font = 'bold 7px monospace';
+  ctx.font = 'bold 10px monospace';
   ctx.textAlign = 'left';
   ctx.fillText(unit.attack, x - cw/2 + 2, y + ch/2 - 4);
   ctx.textAlign = 'right';
@@ -1566,14 +1465,14 @@ function drawUnit(unit) {
   ctx.fillStyle = isOrf ? 'rgba(200,168,32,0.2)' : 'rgba(138,138,138,0.2)';
   ctx.fillRect(x - cw/2, y - ch/2, cw, 8);
   ctx.fillStyle = isOrf ? '#e8c840' : '#c0c0c0';
-  ctx.font = '5px Cinzel, serif';
+  ctx.font = '8px Cinzel, serif';
   ctx.textAlign = 'center';
   ctx.fillText(isOrf ? 'ORF' : 'WULF', x, y - ch/2 + 5);
 
   // Range indicator for artillery
   if (unit.type === 'art') {
     ctx.fillStyle = isOrf ? 'rgba(200,168,32,0.7)' : 'rgba(180,180,180,0.7)';
-    ctx.font = 'bold 6px monospace';
+    ctx.font = 'bold 10px monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
     ctx.fillText('2', x + cw/2 - 1, y - ch/2 + 1);
