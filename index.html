@@ -26,7 +26,7 @@
     --terrain-city: #c0a060;
     --terrain-fortress: #887060;
     --hex-border: #5a4020;
-    --road-color: #d4a040;
+    --road-color: #000000;
     --gold-accent: #c8a820;
     --shadow: rgba(0,0,0,0.5);
   }
@@ -988,9 +988,13 @@ function hexCorners(cx, cy, size) {
 }
 
 function hexNeighbors(col, row) {
-  const odd = col % 2 === 1;
+  const odd = !(col % 2 === 1);
+  // const dirs = odd
+  //   ? [[-1,0],[1,0],[-1,1],[1,1],[0,-1],[0,1]]
+  //   : [[-1,0],[1,0],[-1,-1],[1,-1],[0,-1],[0,1]];
+  console.log(odd)
   const dirs = odd
-    ? [[-1,0],[1,0],[-1,-1],[1,-1],[0,-1],[0,1]]
+    ? [[-1,-1],[1,0],[-1,0],[1,-1],[0,-1],[0,1]]
     : [[-1,0],[1,0],[-1,1],[1,1],[0,-1],[0,1]];
   return dirs.map(([dc, dr]) => ({ col: col + dc, row: row + dr }))
              .filter(({col, row}) => col >= 0 && col < COLS && row >= 0 && row < ROWS);
@@ -1211,6 +1215,157 @@ function drawHex(col, row) {
   const { x, y } = hexToPixel(col, row);
   const cell = game.grid[`${col},${row}`];
   const pts = hexCorners(x, y, HEX_SIZE);
+ 
+  ctx.save();
+ 
+  // Fill
+  let fillColor = TERRAIN_COLORS[cell.type] || '#c0d090';
+  ctx.fillStyle = fillColor;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  ctx.fill();
+ 
+  // Road connections: straight stub (1 neighbour) or smooth curves (2+ neighbours)
+  const isRoadCell = (c, r) => {
+    const g = game.grid[`${c},${r}`];
+    return g && (g.road || g.type === T.CITY || g.type === T.FORTRESS || g.bridge);
+  };
+  if (isRoadCell(col, row)) {
+    const roadNeighbors = hexNeighbors(col, row).filter(nb => isRoadCell(nb.col, nb.row));
+    if (roadNeighbors.length > 0) {
+      // Edge midpoints: halfway between this hex center and each road-neighbour center
+      const edgeMids = roadNeighbors.map(nb => {
+        const { x: nx, y: ny } = hexToPixel(nb.col, nb.row);
+        return { ex: (x + nx) / 2, ey: (y + ny) / 2 };
+      });
+ 
+      const drawRoadPath = (strokeColor, lineW) => {
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = lineW+6;
+        ctx.lineCap = 'round';
+        if (roadNeighbors.length === 1) {
+          // Single stub: straight line from edge midpoint to hex center
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(edgeMids[0].ex, edgeMids[0].ey);
+          ctx.stroke();
+        } else {
+          // Pair up entry points by most-opposite angle, then curve through center
+          const used = new Array(edgeMids.length).fill(false);
+          for (let i = 0; i < edgeMids.length; i++) {
+            if (used[i]) continue;
+            const ai = Math.atan2(edgeMids[i].ey - y, edgeMids[i].ex - x);
+            let bestJ = -1, bestAngle = -1;
+            for (let j = i + 1; j < edgeMids.length; j++) {
+              if (used[j]) continue;
+              const aj = Math.atan2(edgeMids[j].ey - y, edgeMids[j].ex - x);
+              let diff = Math.abs(ai - aj);
+              if (diff > Math.PI) diff = 2 * Math.PI - diff;
+              if (diff > bestAngle) { bestAngle = diff; bestJ = j; }
+            }
+            if (bestJ === -1) {
+              // Unpaired (odd count): straight stub to hex center
+              ctx.beginPath();
+              ctx.moveTo(edgeMids[i].ex, edgeMids[i].ey);
+              ctx.lineTo(x, y);
+              ctx.stroke();
+              used[i] = true;
+            } else {
+              // Smooth quadratic: from edge[i], bent through hex center, to edge[j]
+              ctx.beginPath();
+              ctx.moveTo(edgeMids[i].ex, edgeMids[i].ey);
+              ctx.quadraticCurveTo(x, y, edgeMids[bestJ].ex, edgeMids[bestJ].ey);
+              ctx.stroke();
+              used[i] = true;
+              used[bestJ] = true;
+            }
+          }
+        }
+      };
+ 
+      ctx.save();
+      drawRoadPath('rgba(90,55,10,0.85)', 4.5);  // dark casing
+      drawRoadPath('#d4a030', 2.5);               // golden surface
+      ctx.restore();
+    }
+  }
+ 
+  // Bridge marker
+  if (cell.bridge) {
+    ctx.strokeStyle = '#c8a040';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y);
+    ctx.lineTo(x + 10, y);
+    ctx.stroke();
+  }
+ 
+  // Border
+  ctx.strokeStyle = 'rgba(90,64,32,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < 6; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  ctx.stroke();
+ 
+  // City/fortress symbol
+  if (cell.type === T.CITY) {
+    ctx.fillStyle = cell.owner === 'orf' ? 'rgba(26,58,92,0.6)' : 'rgba(107,26,26,0.6)';
+    ctx.fillRect(x - 8, y - 8, 16, 16);
+    ctx.strokeStyle = cell.owner === 'orf' ? '#orf-gold' : '#888';
+    ctx.strokeStyle = '#c8a820';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 8, y - 8, 16, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏙', x, y);
+    if (cell.name) {
+      ctx.fillStyle = '#f0e0b0';
+      ctx.font = 'bold 8px Cinzel, serif';
+      ctx.fillText(cell.name, x, y + HEX_SIZE * 0.65);
+    }
+  } else if (cell.type === T.FORTRESS) {
+    ctx.fillStyle = '#f0e0b0';
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏰', x, y);
+    if (cell.name) {
+      ctx.fillStyle = '#d0c0a0';
+      ctx.font = 'bold 10px Cinzel, serif';
+      ctx.fillText(cell.name, x, y + HEX_SIZE * 0.65);
+    }
+  } else if (cell.type === T.FOREST) {
+    ctx.font = '14px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🌲', x, y);
+  } else if (cell.type === T.HILLS) {
+    ctx.font = '12px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⛰', x, y);
+  }
+ 
+  // Coord
+  ctx.fillStyle = 'rgba(100,80,50,0.5)';
+  ctx.font = '7px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`${col},${row}`, x, y - HEX_SIZE + 2);
+ 
+  ctx.restore();
+}
+
+function drawHexOld(col, row) {
+  const { x, y } = hexToPixel(col, row);
+  const cell = game.grid[`${col},${row}`];
+  const pts = hexCorners(x, y, HEX_SIZE);
 
   ctx.save();
 
@@ -1223,19 +1378,38 @@ function drawHex(col, row) {
   ctx.closePath();
   ctx.fill();
 
-  // Road overlay
-  if (cell.road) {
-    ctx.fillStyle = 'rgba(180,144,72,0.4)';
-    ctx.fill();
-    // Draw road lines
-    ctx.strokeStyle = 'rgba(200,160,60,0.6)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath();
-    ctx.moveTo(x - HEX_SIZE * 0.6, y);
-    ctx.lineTo(x + HEX_SIZE * 0.6, y);
-    ctx.stroke();
-    ctx.setLineDash([]);
+  // Road connections — draw a line from center toward each road/city/fortress neighbour
+  const isRoadCell = (c, r) => {
+    const g = game.grid[`${c},${r}`];
+    return g && (g.road || g.type === T.CITY || g.type === T.FORTRESS || g.bridge);
+  };
+  if (isRoadCell(col, row)) {
+    const roadNeighbors = hexNeighbors(col, row).filter(nb => isRoadCell(nb.col, nb.row));
+    if (roadNeighbors.length > 0) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      // Casing (dark outline)
+      ctx.strokeStyle = 'rgba(90,55,10,0.8)';
+      ctx.lineWidth = 4.5;
+      for (const nb of roadNeighbors) {
+        const { x: nx, y: ny } = hexToPixel(nb.col, nb.row);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo((x + nx) / 2, (y + ny) / 2);
+        ctx.stroke();
+      }
+      // Road surface
+      ctx.strokeStyle = '#d4a030';
+      ctx.lineWidth = 2.5;
+      for (const nb of roadNeighbors) {
+        const { x: nx, y: ny } = hexToPixel(nb.col, nb.row);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo((x + nx) / 2, (y + ny) / 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 
   // Bridge marker
